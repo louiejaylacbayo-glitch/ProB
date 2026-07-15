@@ -67,22 +67,13 @@ export default function Home() {
   const playSound = (fileName: string, volumeLevel = 0.7) => {
     try {
       const audio = new Audio(`/sounds/${fileName}`);
-      // Force fah.mp3 to be significantly quieter so it isn't loud
-      audio.volume = fileName === 'fah.mp3' ? 0.25 : volumeLevel;
+      // Force fah.mp3 to be super quiet (15% volume)
+      audio.volume = fileName === 'fah.mp3' ? 0.15 : volumeLevel;
       audio.play().catch(() => {});
     } catch {}
   };
 
   const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
-
-  // Plays 'fah.mp3' repeatedly matching the exact multiplier count
-  const playFahSequence = async (multiplier: number) => {
-    const times = Math.max(1, Math.min(multiplier, 10)); 
-    for (let i = 0; i < times; i++) {
-      playSound('fah.mp3');
-      await delay(160); 
-    }
-  };
 
   const buyFreeSpins = (spinCount: number, cost: number) => {
     if (isSpinning || isAutoSpinning || balance < cost) return;
@@ -150,8 +141,8 @@ export default function Home() {
 
             playWinTierSound(runningWin);
             
-            // Wait for the exact count of fah sounds to finish before moving forward
-            await playFahSequence(cascade.multiplier);
+            // ONE boom = ONE fah (and very quiet!)
+            playSound('fah.mp3');
             await delay(900); 
             
             setBoomingSymbols([]); 
