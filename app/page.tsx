@@ -67,7 +67,6 @@ export default function Home() {
   const playSound = (fileName: string, volumeLevel = 0.7) => {
     try {
       const audio = new Audio(`/sounds/${fileName}`);
-      // Force fah.mp3 to be super quiet (15% volume)
       audio.volume = fileName === 'fah.mp3' ? 0.15 : volumeLevel;
       audio.play().catch(() => {});
     } catch {}
@@ -141,7 +140,6 @@ export default function Home() {
 
             playWinTierSound(runningWin);
             
-            // ONE boom = ONE fah (and very quiet!)
             playSound('fah.mp3');
             await delay(900); 
             
@@ -155,11 +153,15 @@ export default function Home() {
 
       setIsSpinning(false);
 
+      // --- ARAKO SOUND LOGIC FIX ---
       if (data.triggerFreeSpins && !isAutoSpinning) {
         playSound('paldo.mp3', 0.8);
         setShowFreeSpinTap(true);
-      } else if (data.scatterCount === 3 && !data.triggerFreeSpins) {
-        playSound('arako.mp3', 0.8);
+      } else {
+        // Play Arako if the player won NOTHING, OR if they got teased with 2 or 3 scatters
+        if (data.totalWin === 0 || data.scatterCount === 2 || data.scatterCount === 3) {
+          playSound('arako.mp3', 0.8);
+        }
       }
 
       if (data.totalWin > 0) {
