@@ -36,9 +36,8 @@ export default function Home() {
   useEffect(() => {
     bgMusicRef.current = new Audio('/sounds/background.mp3');
     bgMusicRef.current.loop = true;
-    bgMusicRef.current.volume = 0.3; 
+    bgMusicRef.current.volume = 0.2; 
     
-    // Generate static anime background stars/orbs
     const stars = Array.from({ length: 40 }).map((_, i) => ({
       id: i,
       x: Math.random() * 100,
@@ -57,32 +56,41 @@ export default function Home() {
   };
 
   const playWinTierSound = (winAmount: number) => {
-    if (winAmount >= 200) { setWinTierText("PRObleMA!"); playSound('s.mp3'); }
-    else if (winAmount >= 150) { setWinTierText("SAVAGE"); playSound('s.mp3'); }
-    else if (winAmount >= 100) { setWinTierText("MANIAC"); playSound('m.mp3'); }
-    else if (winAmount >= 70) { setWinTierText("TRIPLE KILL"); playSound('3.mp3'); }
-    else if (winAmount >= 40) { setWinTierText("DOUBLE KILL"); playSound('2.mp3'); }
-    else if (winAmount >= 20) { setWinTierText("FIRST BLOOD"); playSound('f.mp3'); }
+    if (winAmount >= 200) { setWinTierText("PRObleMA!"); playSound('s.mp3', 0.8); }
+    else if (winAmount >= 150) { setWinTierText("SAVAGE"); playSound('s.mp3', 0.8); }
+    else if (winAmount >= 100) { setWinTierText("MANIAC"); playSound('m.mp3', 0.8); }
+    else if (winAmount >= 70) { setWinTierText("TRIPLE KILL"); playSound('3.mp3', 0.8); }
+    else if (winAmount >= 40) { setWinTierText("DOUBLE KILL"); playSound('2.mp3', 0.8); }
+    else if (winAmount >= 20) { setWinTierText("FIRST BLOOD"); playSound('f.mp3', 0.8); }
   };
 
-  const playSound = (fileName: string) => {
+  const playSound = (fileName: string, volumeLevel = 0.7) => {
     try {
       const audio = new Audio(`/sounds/${fileName}`);
-      audio.volume = 0.8;
+      // Force fah.mp3 to be significantly quieter so it isn't loud
+      audio.volume = fileName === 'fah.mp3' ? 0.25 : volumeLevel;
       audio.play().catch(() => {});
     } catch {}
   };
 
   const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-  // Plays 'fah.mp3' repeatedly based on the multiplier
+  // Plays 'fah.mp3' repeatedly matching the exact multiplier count
   const playFahSequence = async (multiplier: number) => {
-    // Cap it at 10 so it doesn't hold up the game forever on massive multipliers
-    const times = Math.min(multiplier, 10); 
+    const times = Math.max(1, Math.min(multiplier, 10)); 
     for (let i = 0; i < times; i++) {
       playSound('fah.mp3');
-      await delay(150); // Fast rapid-fire sound
+      await delay(160); 
     }
+  };
+
+  const buyFreeSpins = (spinCount: number, cost: number) => {
+    if (isSpinning || isAutoSpinning || balance < cost) return;
+    setBalance(prev => prev - cost);
+    setFreeSpinsLeft(spinCount);
+    setIsFreeSpinMode(true);
+    setIsAutoSpinning(true);
+    playSound('paldo.mp3', 0.8);
   };
 
   const spawnExplosionParticles = () => {
@@ -140,14 +148,11 @@ export default function Home() {
             runningWin += cascade.win;
             setWin(runningWin); 
 
-            // Trigger MOBA text and sound
             playWinTierSound(runningWin);
-
-            // Trigger the rapidly repeating FAH sounds based on multiplier
-            // We run this without 'await' so it plays while the boom animation happens
-            playFahSequence(cascade.multiplier);
-
-            await delay(1300); // Wait for animations
+            
+            // Wait for the exact count of fah sounds to finish before moving forward
+            await playFahSequence(cascade.multiplier);
+            await delay(900); 
             
             setBoomingSymbols([]); 
             setStepWinAmount(null);
@@ -160,10 +165,10 @@ export default function Home() {
       setIsSpinning(false);
 
       if (data.triggerFreeSpins && !isAutoSpinning) {
-        playSound('paldo.mp3');
+        playSound('paldo.mp3', 0.8);
         setShowFreeSpinTap(true);
       } else if (data.scatterCount === 3 && !data.triggerFreeSpins) {
-        playSound('arako.mp3');
+        playSound('arako.mp3', 0.8);
       }
 
       if (data.totalWin > 0) {
@@ -172,8 +177,6 @@ export default function Home() {
         setTimeout(() => setIsBalanceBumping(false), 2000);
       } else {
         setBalance(data.newBalance);
-        // Play 1 fah if you lose, but only if you didn't trigger free spins
-        if (!data.triggerFreeSpins) playSound('fah.mp3');
       }
 
     } catch {
@@ -255,7 +258,6 @@ export default function Home() {
         }
         .floating-cards { animation: bounce-slow 3s ease-in-out infinite; }
 
-        /* Dynamic Anime Gradient Background */
         .anime-gradient {
           background: linear-gradient(-45deg, #3b0764, #be185d, #0f172a, #1e1b4b);
           background-size: 400% 400%;
@@ -268,10 +270,8 @@ export default function Home() {
         }
       `}} />
 
-      {/* ENTIRE PAGE CONTAINER - Forces dark vibrant background */}
       <div className="fixed inset-0 w-full h-full anime-gradient -z-20"></div>
 
-      {/* FLOATING ANIME PARTICLES BACKGROUND */}
       <div className="fixed inset-0 w-full h-full pointer-events-none -z-10 overflow-hidden">
         {bgStars.map((star) => (
           <div 
@@ -292,7 +292,6 @@ export default function Home() {
 
       <div className="flex flex-col items-center justify-center min-h-screen font-sans select-none pb-4 relative overflow-hidden">
         
-        {/* Explosion Particle System */}
         <div className="absolute inset-0 pointer-events-none z-50 overflow-hidden">
           {particles.map((p) => (
             <div
@@ -309,7 +308,6 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Free Spin Notification */}
         {showFreeSpinTap && (
           <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4 cursor-pointer backdrop-blur-sm" onClick={startFreeSpins}>
              <div className="text-8xl mb-6 animate-bounce">⚡⚡⚡⚡</div>
@@ -318,12 +316,10 @@ export default function Home() {
           </div>
         )}
 
-        {/* ENTRANCE SCREEN */}
         {!hasStarted && (
           <div className="w-full max-w-md px-6 flex flex-col items-center justify-center z-20 h-screen relative">
             <div className="bg-[#15121F]/80 backdrop-blur-md border-2 border-pink-500/50 p-8 pt-12 rounded-[2.5rem] text-center flex flex-col items-center relative w-full shadow-[0_0_50px_rgba(236,72,153,0.4)]">
               
-              {/* Profile Avatar and Fan Cards */}
               <div className="relative w-36 h-36 flex items-center justify-center mb-6">
                 <div className="absolute -right-4 -top-2 rotate-12 bg-white rounded-md w-12 h-16 border border-gray-300 shadow-xl flex flex-col items-center justify-center font-bold text-red-600 text-xs floating-cards">
                   <span>A</span><span>♦</span>
@@ -335,7 +331,6 @@ export default function Home() {
                   <span>A</span><span>♥</span>
                 </div>
                 
-                {/* Center character avatar */}
                 <div className="w-28 h-28 rounded-full bg-[#1F1933] border-4 border-pink-500 overflow-hidden flex items-center justify-center shadow-[0_0_20px_#ec4899] relative">
                   <svg className="w-24 h-24" viewBox="0 0 100 100" fill="none">
                     <circle cx="50" cy="53" r="30" fill="#FCE3D2"/>
@@ -352,7 +347,6 @@ export default function Home() {
               <h2 className="text-cyan-400 font-extrabold text-sm tracking-wider uppercase mb-1 drop-shadow-md">WELCOME TO</h2>
               <h1 className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-300 to-cyan-400 mb-6 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]" style={{ fontFamily: 'Impact' }}>PROB</h1>
               
-              {/* Play responsibly badge */}
               <div className="bg-[#1E172B] border border-cyan-500/50 rounded-full px-4 py-1.5 flex items-center gap-2 mb-6 shadow-inner animate-pulse">
                 <span className="bg-pink-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold">18</span>
                 <span className="text-cyan-300 font-extrabold text-xs tracking-wider">PLAY RESPONSIBLY</span>
@@ -369,7 +363,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* ACTIVE SLOT MACHINE */}
         {hasStarted && (
           <div className="w-full flex flex-col items-center pt-4 relative min-h-screen">
             <button onClick={() => { setHasStarted(false); if (bgMusicRef.current) bgMusicRef.current.pause(); }} className="absolute top-4 left-4 z-50 bg-black/70 border border-pink-500/40 text-pink-400 px-4 py-2 rounded-full font-bold text-xs flex items-center gap-1 active:scale-95 transition-all shadow-md">
@@ -379,7 +372,6 @@ export default function Home() {
             <div className="w-full max-w-md pb-2 flex flex-col items-center relative z-10 mt-12">
               <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-white to-cyan-400 mb-3 drop-shadow-[0_0_10px_rgba(236,72,153,0.8)]" style={{ fontFamily: 'Impact' }}>ProB</h1>
               
-              {/* Multiplier Bar */}
               <div className="flex items-center justify-center space-x-4 bg-black/60 backdrop-blur-sm px-6 py-2 rounded-full border-2 border-pink-500/50 shadow-[0_0_20px_rgba(236,72,153,0.3)]">
                 {isFreeSpinMode ? (
                     <>
@@ -408,7 +400,6 @@ export default function Home() {
             {/* SLOT GRID */}
             <div className="w-full max-w-[380px] px-2 mt-2 relative">
               
-              {/* Live popup texts */}
               <div className="absolute inset-0 z-40 flex flex-col items-center justify-center pointer-events-none">
                 {winTierText && (
                   <h1 className="moba-win-text text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 via-pink-500 to-purple-800 drop-shadow-[0_5px_10px_rgba(0,0,0,0.9)] absolute top-0" style={{ fontFamily: 'Impact', WebkitTextStroke: '2px white' }}>
@@ -428,7 +419,6 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Grid with gorgeous dark textured card styles */}
               <div className="grid grid-cols-5 gap-[4px] bg-black/60 backdrop-blur-md p-2 rounded-xl border-4 border-pink-500/60 shadow-[0_0_40px_rgba(236,72,153,0.4)]">
                 {board.map((symbol, index) => {
                   const isBooming = boomingSymbols.includes(symbol);
@@ -449,8 +439,27 @@ export default function Home() {
               </div>
             </div>
 
-            {/* CONTROLS */}
+            {/* CONTROLS AREA */}
             <div className="w-full max-w-md flex flex-col items-center mt-auto px-4 pt-4 pb-1">
+              
+              {/* FEATURE BUY BUTTONS */}
+              <div className="flex gap-3 justify-center w-full mb-3">
+                <button 
+                  onClick={() => buyFreeSpins(5, 50.00)} 
+                  disabled={isSpinning || isAutoSpinning || balance < 50.00} 
+                  className="flex-1 py-2 rounded-xl font-black text-xs uppercase border border-pink-500 bg-gradient-to-r from-pink-900/60 to-purple-900/60 text-pink-300 hover:brightness-120 active:scale-95 transition-all disabled:opacity-30 shadow-[0_0_10px_rgba(236,72,153,0.2)]"
+                >
+                  🎬 Buy 5 Spins <br/><span className="text-white text-sm">₱50.00</span>
+                </button>
+                <button 
+                  onClick={() => buyFreeSpins(10, 100.00)} 
+                  disabled={isSpinning || isAutoSpinning || balance < 100.00} 
+                  className="flex-1 py-2 rounded-xl font-black text-xs uppercase border border-cyan-500 bg-gradient-to-r from-purple-900/60 to-cyan-900/60 text-cyan-300 hover:brightness-120 active:scale-95 transition-all disabled:opacity-30 shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+                >
+                  🚀 Buy 10 Spins <br/><span className="text-white text-sm">₱100.00</span>
+                </button>
+              </div>
+
               <div className={`bg-black/80 backdrop-blur-sm border-2 px-6 py-2 rounded-full font-bold text-xl tracking-widest mb-4 transition-all ${win > 0 ? 'border-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.6)] text-cyan-300 scale-110' : 'border-pink-500/50 text-pink-400'}`}>
                 WIN: <span className="text-white font-black">₱ {win.toFixed(2)}</span>
               </div>
@@ -475,7 +484,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* CREATIVE ADVISORY BAR */}
             <div className="w-full bg-gradient-to-r from-pink-600 via-purple-600 to-cyan-600 py-1.5 overflow-hidden relative flex items-center select-none shadow-[0_-5px_15px_rgba(0,0,0,0.5)]">
               <div className="ticker-text whitespace-nowrap text-xs font-extrabold text-white uppercase flex gap-12 tracking-wider">
                 <span>⚠️ 21 years old and above only. Know when to stop. Play responsibly. Simulated gaming only. www.pagcor.ph/regulatory</span>
